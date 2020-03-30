@@ -81,7 +81,7 @@ struct segment {
 
 bool intersect(const segment & s1__, const segment & s2__) {
     if ((max(s1__.p1__.x__, s2__.p1__.x__) <=
-        min(s1__.p2__.x__, s2__.p2__.x__)) &&
+         min(s1__.p2__.x__, s2__.p2__.x__)) &&
         min(max(s1__.p1__.y__, s1__.p2__.y__),
             max(s2__.p1__.y__, s2__.p2__.y__)) >=
         max(min(s1__.p1__.y__, s1__.p2__.y__),
@@ -122,32 +122,31 @@ pair<int, int> find_intersection(const vector<segment> & segs) {
     }
     sort(events.begin(), events.end());
     auto y_order_pred =
-    function<bool(int, int) >(
-            [&] (int idl__, int idr__) -> bool {
-                int desc_mask =
-                segs[idl__].vertical() + segs[idr__].vertical() * 2;
-                if (desc_mask == 3) {
-                    return segs[idl__].p2__.y__ < segs[idr__].p1__.y__;
-                } else if (desc_mask == 2) {
-                    return
-                    segs[idl__].p1__.product(segs[idl__].p2__,
-                                             segs[idr__].p1__) > 0;
-                } else if (desc_mask == 1) {
-                    return
-                    segs[idr__].p1__.product(segs[idr__].p2__,
-                                             segs[idl__].p1__) < 0;
-                } else {
-                    if (segs[idl__].p1__.x__ > segs[idr__].p1__.x__) {
-                        return
-                        segs[idr__].p1__.product(segs[idr__].p2__,
-                                                 segs[idl__].p1__) < 0;
-                    } else {
-                        return
-                        segs[idl__].p1__.product(segs[idl__].p2__,
-                                                 segs[idr__].p1__) > 0;
-                    }
-                }
-            });
+            function<bool(int, int) >(
+                    [&] (int idl__, int idr__) -> bool {
+                        int desc_mask =
+                                segs[idl__].vertical() + segs[idr__].vertical() * 2;
+                        switch (desc_mask) {
+                            case 3:
+                            return segs[idl__].p2__.y__ < segs[idr__].p1__.y__;
+                            case 2:
+                            return segs[idl__].p1__.product(segs[idl__].p2__,
+                                                            segs[idr__].p1__) > 0;
+                            case 1:
+                            return segs[idr__].p1__.product(segs[idr__].p2__,
+                                                            segs[idl__].p1__) < 0;
+                            default:
+                            if (segs[idl__].p1__.x__ > segs[idr__].p1__.x__) {
+                                return
+                                        segs[idr__].p1__.product(segs[idr__].p2__,
+                                                                 segs[idl__].p1__) < 0;
+                            } else {
+                                return
+                                        segs[idl__].p1__.product(segs[idl__].p2__,
+                                                                 segs[idr__].p1__) > 0;
+                            }
+                        }
+                    });
     set<int, function<bool(int, int)> > y_order(y_order_pred);
     for (auto & e__ : events) {
         if (e__.type == '+') {
@@ -158,10 +157,10 @@ pair<int, int> find_intersection(const vector<segment> & segs) {
                 }
             }
             if (place != y_order.begin()) {
-               auto prev = std::prev(place);
-               if (intersect(segs[*prev], segs[e__.id])) {
+                auto prev = std::prev(place);
+                if (intersect(segs[*prev], segs[e__.id])) {
                     return { *prev, e__.id };
-               }
+                }
             }
             y_order.insert(e__.id);
         } else {
