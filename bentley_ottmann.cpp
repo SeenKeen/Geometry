@@ -2,11 +2,16 @@
 
 // Bentley-Ottman algorithm
 // Algorithm employs sweep line technique
-// to find any pair of intersecting segments
+// to find a pair of intersecting segments.
+// Returns the indexes of these pairs in given succession
+// If there are many, the leftmost pair of segments will be returned.
 
 // This code provides stable and fast implementation
 // WITHOUT floating point arithmetics
 
+// Complexity O(nlogn)
+
+// Value limitaion : for correct work coordinate values must not exceed 10^9
 
 #include <cmath>
 #include <iomanip>
@@ -41,6 +46,9 @@ struct point {
         this->y__ = y__;
     }
     int64_t product(const point & to__, const point & check__) const {
+        // cross product if vectors A x B
+        // where A is vector *this -> __to
+        //       B is vector *this -> check__
         int64_t vx = to__.x__ - x__;
         int64_t vy = to__.y__ - y__;
         int64_t chx = check__.x__ - x__;
@@ -48,6 +56,7 @@ struct point {
         return vx * chy - chx * vy;
     }
     int det_sign(const point & to__, const point & check__) const {
+        // returns the sign of cross product or zero
         int64_t det = product(to__, check__);
         return (det != 0) ? (det / abs(det)) : 0;
     }
@@ -59,9 +68,7 @@ struct point {
 struct segment {
     point p1__;
     point p2__;
-    segment() {
-        // None
-    }
+    segment() = default;
     segment(const point & p1__, const point & p2__) {
         if (p1__.x__ <= p2__.x__) {
             this->p1__ = p1__;
@@ -100,9 +107,7 @@ struct event {
     int id;
     int x__;
     char type;
-    event() {
-        // None
-    }
+    event() = default;
     event(int id, int x__, char type) {
         this->id = id;
         this->x__ = x__;
@@ -121,42 +126,54 @@ pair<int, int> find_intersection(const vector<segment> & segs) {
         events.emplace_back(i, segs[i].p2__.x__, '-');
     }
     sort(events.begin(), events.end());
+    // comparator for segment ordering by y-coordinate
+    // for current x of sweeping line
+    // Consider segment is a subset of line y = f(x)
+    // So we have lines y = f_idl(x) and y = f_idr(x)
+    // IN FACT comp. returns whether f_idl(x) < f_idr(x)
+    // for current position x of sweep line
     auto y_order_pred =
             function<bool(int, int) >(
                     [&] (int idl__, int idr__) -> bool {
                         int desc_mask =
                                 segs[idl__].vertical() + segs[idr__].vertical() * 2;
+                        // desc_mask determines degenerate cases
+                        // flag 1 << 0 : 'less' segment is vertical
+                        // flag 1 << 1 : 'greater' segment is vertical
                         switch (desc_mask) {
                             case 3:
-                            return segs[idl__].p2__.y__ < segs[idr__].p1__.y__;
+                                return segs[idl__].p2__.y__ < segs[idr__].p1__.y__;
                             case 2:
-                            return segs[idl__].p1__.product(segs[idl__].p2__,
-                                                            segs[idr__].p1__) > 0;
+                                return segs[idl__].p1__.product(segs[idl__].p2__,
+                                                                segs[idr__].p1__) > 0;
                             case 1:
-                            return segs[idr__].p1__.product(segs[idr__].p2__,
-                                                            segs[idl__].p1__) < 0;
+                                return segs[idr__].p1__.product(segs[idr__].p2__,
+                                                                segs[idl__].p1__) < 0;
                             default:
-                            if (segs[idl__].p1__.x__ > segs[idr__].p1__.x__) {
-                                return
-                                        segs[idr__].p1__.product(segs[idr__].p2__,
-                                                                 segs[idl__].p1__) < 0;
-                            } else {
-                                return
-                                        segs[idl__].p1__.product(segs[idl__].p2__,
-                                                                 segs[idr__].p1__) > 0;
-                            }
+                                if (segs[idl__].p1__.x__ > segs[idr__].p1__.x__) {
+                                    return segs[idr__].p1__.product(segs[idr__].p2__,
+                                                                    segs[idl__].p1__) < 0;
+                                } else {
+                                    return segs[idl__].p1__.product(segs[idl__].p2__,
+                                                                    segs[idr__].p1__) > 0;
+                                }
                         }
                     });
+    // y_order maintains actual y-ordering of segments
     set<int, function<bool(int, int)> > y_order(y_order_pred);
     for (auto & e__ : events) {
         if (e__.type == '+') {
+            // new segment starts
+            // find the first upper segment
             auto place = y_order.lower_bound(e__.id);
             if (place != y_order.end()) {
+                // if there is upper segment
                 if (intersect(segs[*place], segs[e__.id])) {
                     return { *place, e__.id };
                 }
             }
             if (place != y_order.begin()) {
+                // if there is lower segment
                 auto prev = std::prev(place);
                 if (intersect(segs[*prev], segs[e__.id])) {
                     return { *prev, e__.id };
@@ -164,8 +181,10 @@ pair<int, int> find_intersection(const vector<segment> & segs) {
             }
             y_order.insert(e__.id);
         } else {
+            // segment ends
             auto place = y_order.find(e__.id);
             if (place != y_order.begin()) {
+                // if there is upper segment
                 auto prev = std::prev(place);
                 if (intersect(segs[*prev], segs[e__.id])) {
                     return { *prev, e__.id };
@@ -173,6 +192,7 @@ pair<int, int> find_intersection(const vector<segment> & segs) {
             }
             auto next = std::next(place);
             if (next != y_order.end()) {
+                // if there is lower segment
                 if (intersect(segs[*next], segs[e__.id])) {
                     return { *next, e__.id };
                 }
