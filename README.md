@@ -6,4 +6,4 @@ BO is geometrical algorithm for finding all pairwise segment intersections. It's
 
 Here is implemented version searching just for any intersection, K = 1, so gained O(nlogn).
 
-### Closest points pair
+### Closest pair of points
