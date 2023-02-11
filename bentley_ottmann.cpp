@@ -36,6 +36,7 @@ using std::swap;
 using std::vector;
 
 struct point {
+    
     int x__;
     int y__;
     point() {
